@@ -48,13 +48,27 @@ app.get("/api/exchange_auth_code", (req, res) => {
 		.catch(printError);
 });
 
-app.get("/api/ping_monzo", (req, res) =>
+app.get("/api/ping_monzo", (req, res) => {
+	const { accessToken } = req.query;
+
 	axios
-		.options("https://api.monzo.com/ping/whoami")
-		.then((result) => res.json(result))
-		.catch((error) => console.log(error))
-		.finally(() => {})
-);
+		.get(`${monzoApiUrl}/ping/whoami`, {
+			headers: { Authorization: `Bearer ${accessToken}` },
+		})
+		.then((result) => res.json(result.data))
+		.catch(printError);
+});
+
+app.get("/api/get_accounts", (req, res) => {
+	const { accessToken } = req.query;
+
+	axios
+		.get(`${monzoApiUrl}/accounts`, {
+			headers: { Authorization: `Bearer ${accessToken}` },
+		})
+		.then((result) => res.json(result.data))
+		.catch(printError);
+});
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
 
