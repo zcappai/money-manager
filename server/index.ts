@@ -8,6 +8,7 @@ const redirectURL = "http://localhost:3000";
 
 const app = express();
 
+// DELETE OAUTH CLIENT AND ADD DETAILS FROM A CONFIG FILE
 const oauthDetails = {
 	client_id: "oauth2client_0000AXYfpUynUsrUvkqM2E",
 	client_secret:
@@ -64,6 +65,20 @@ app.get("/api/get_accounts", (req, res) => {
 
 	axios
 		.get(`${monzoApiUrl}/accounts`, {
+			headers: { Authorization: `Bearer ${accessToken}` },
+		})
+		.then((result) => res.json(result.data))
+		.catch(printError);
+});
+
+app.get("/api/get_transactions", (req, res) => {
+	const { accessToken, accountID } = req.query;
+
+	const formData = new URLSearchParams();
+	formData.set("account_id", accountID as string);
+
+	axios
+		.get(`${monzoApiUrl}/transactions?account_id=${accountID}`, {
 			headers: { Authorization: `Bearer ${accessToken}` },
 		})
 		.then((result) => res.json(result.data))

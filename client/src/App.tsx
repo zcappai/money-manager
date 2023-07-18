@@ -1,7 +1,14 @@
 import React, { useEffect, useReducer, useState } from "react";
 import logo from "./logo.svg";
 import "./App.css";
-import { Badge, Button, IconSettings } from "@salesforce/design-system-react/";
+import {
+	Badge,
+	Button,
+	DataTable,
+	DataTableColumn,
+	IconSettings,
+} from "@salesforce/design-system-react/";
+import moment from "moment";
 
 type AuthorisationType = {
 	accessToken: string | null | null;
@@ -20,7 +27,8 @@ type AuthenticationStatusType = {
 };
 
 type Account = {
-	// Also includes "owners", "payment_details", "id"
+	// Also includes "owners", "payment_details"
+	ID: string;
 	accountNumber: string;
 	closed: boolean;
 	countryCode: string;
@@ -31,10 +39,25 @@ type Account = {
 	type: string;
 };
 
+type Transaction = {
+	ID: number;
+	accountID: string;
+	amount: number;
+	amountWithPrefix: string;
+	amountIsPending: boolean;
+	category: string;
+	counterpartyName: string;
+	created: string;
+	currency: string;
+	description: string;
+	notes: string;
+};
+
 function App() {
 	const [monzoAuthURL, setMonzoAuthURL] = useState<string | null>(null);
 	const [monzoCode, setMonzoCode] = useState<string | null>(null);
 	const [accounts, setAccounts] = useState<Array<Account>>([]);
+	const [transactions, setTransactions] = useState<Array<Transaction>>([]);
 	const [authorisationData, setAuthorisationData] = useReducer(
 		(curData: AuthorisationType, newData: Partial<AuthorisationType>) => ({
 			...curData,
@@ -114,6 +137,7 @@ function App() {
 				setAccounts(
 					val.accounts.map((x: any) => {
 						const account: Account = {
+							ID: x.id,
 							accountNumber: x.account_number,
 							closed: x.closed,
 							countryCode: x.country_code,
@@ -128,6 +152,56 @@ function App() {
 				)
 			);
 	};
+
+	const getTransactionsList = () => {
+		fetch(
+			`/api/get_transactions?accessToken=${authorisationData.accessToken}&accountID=${accounts[0].ID}`
+		)
+			.then((res) => res.json())
+			.then((val) => {
+				const monzoTransactions: Array<Transaction> = val.transactions
+					.filter((x: any) => x.decline_reason === undefined)
+					.map((x: any, index: number) => {
+						const transaction: Transaction = {
+							ID: index + 1,
+							accountID: x.account_id,
+							amount: x.amount / 100,
+							amountWithPrefix: `${x.amount < 0 ? "-" : ""}£${
+								Math.abs(x.amount.toFixed(2)) / 100
+							}`,
+							amountIsPending: x.amount_is_pending,
+							category: x.category,
+							counterpartyName: x.counterparty.name,
+							created: moment(x.created).format("H:MMA DD/MM/YYYY"),
+							currency: x.currency,
+							description: x.description,
+							notes: x.notes,
+						};
+						return transaction;
+					});
+				setTransactions(monzoTransactions.reverse());
+			});
+	};
+
+	const columns = [
+		<DataTableColumn
+			key="amountWithPrefix"
+			label="Amount"
+			property="amountWithPrefix"
+		/>,
+		<DataTableColumn key="category" label="Category" property="category" />,
+		<DataTableColumn
+			key="counterparty"
+			label="Counterparty"
+			property="counterpartyName"
+		/>,
+		<DataTableColumn key="created" label="Created" property="created" />,
+		<DataTableColumn
+			key="description"
+			label="Description"
+			property="description"
+		/>,
+	];
 
 	return (
 		<IconSettings iconPath="/icons">
@@ -163,6 +237,24 @@ function App() {
 						className="slds-text-body_regular"
 						disabled={!authenticationStatus.authenticated}
 					/>
+					<Button
+						label="Get list of transactions"
+						onClick={getTransactionsList}
+						className="slds-text-body_regular"
+						disabled={!authenticationStatus.authenticated}
+					/>
+					{`Monzo account balance: £${transactions
+						.map((x) => x.amount)
+						.reduce((a, b) => a + b, 0)
+						.toFixed(2)}`}
+					<div style={{ height: "500px", overflow: "scroll" }}>
+						<DataTable
+							items={transactions}
+							className="slds-text-body_regular slds-text-color_default"
+						>
+							{columns}
+						</DataTable>
+					</div>
 				</header>
 			</div>
 		</IconSettings>
