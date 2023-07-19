@@ -1,84 +1,102 @@
 import express from "express";
 import axios, { AxiosError } from "axios";
 
+require("dotenv").config();
+
 const PORT = process.env.PORT || 3001;
-const monzoAuthUrl = "https://auth.monzo.com";
-const monzoApiUrl = "https://api.monzo.com";
-const redirectURL = "http://localhost:3000";
 
 const app = express();
 
-// DELETE OAUTH CLIENT AND ADD DETAILS FROM A CONFIG FILE
-const oauthDetails = {
-	client_id: "oauth2client_0000AXYfpUynUsrUvkqM2E",
-	client_secret:
-		"mnzpub.54oESFAw5DsTzw3TYnxLF4iQwNqn9mJlMP3GcruHLIO6lbLHYkQ0fgh65/Ng3haFtAvArWqrcXEbwgMCKd6AuA==",
-	redirect_uri: `http://localhost:${PORT}/oauth/callback`,
-};
+const redirect_uri = `http://localhost:${PORT}/oauth/callback`;
 
-let tempAuthCode: string;
+const truelayerScopes = [
+	"info",
+	"accounts",
+	"balance",
+	"cards",
+	"transactions",
+	"direct_debits",
+	"standing_orders",
+	"offline_access",
+];
 
-app.get("/api/get_auth_url", (req, res) => {
-	const { client_id, redirect_uri } = oauthDetails;
-	let authURL = `${monzoAuthUrl}?client_id=${client_id}&redirect_uri=${redirect_uri}&response_type=code`;
+const truelayerProviders = [
+	"uk-ob-amex",
+	"uk-ob-hsbc",
+	"uk-ob-monzo",
+	"uk-ob-revolut",
+	"uk-ob-starling",
+];
+
+// Truelayer endpoints
+app.get("/api/truelayer/get_auth_url", (req, res) => {
+	const scopes = truelayerScopes.join("%20");
+	const providers = truelayerProviders.join("%20").concat("uk-oauth-all");
+	let authURL = `${process.env.TRUELAYER_AUTH_URL}?response_type=code&client_id=${process.env.TRUELAYER_CLIENT_ID}&scope=${scopes}&redirect_uri=${process.env.TRUELAYER_REDIRECT_URL}&providers=${providers}`;
+	res.json({ authURL: authURL });
+});
+
+// Monzo endpoints
+app.get("/api/monzo/get_auth_url", (req, res) => {
+	let authURL = `${process.env.MONZO_AUTH_URL}?client_id=${process.env.MONZO_CLIENT_ID}&redirect_uri=${redirect_uri}&response_type=code`;
 	res.json({ authURL: authURL });
 });
 
 app.get("/oauth/callback", (req, res) => {
 	const { code } = req.query;
 	if (code && typeof code === "string") {
-		tempAuthCode = code;
-		res.redirect(`${redirectURL}?code=${code}`);
+		res.redirect(`${process.env.REDIRECT_URL}?code=${code}`);
 	}
 });
 
-app.get("/api/exchange_auth_code", (req, res) => {
+app.get("/api/monzo/exchange_auth_code", (req, res) => {
 	const { authCode } = req.query;
-	const { client_id, client_secret, redirect_uri } = oauthDetails;
 
-	const formData = new URLSearchParams();
-	formData.set("grant_type", "authorization_code");
-	formData.set("client_id", client_id);
-	formData.set("client_secret", client_secret);
-	formData.set("redirect_uri", redirect_uri);
-	formData.set("code", authCode as string);
+	if (process.env.MONZO_CLIENT_ID && process.env.MONZO_CLIENT_SECRET) {
+		const formData = new URLSearchParams();
+		formData.set("grant_type", "authorization_code");
+		formData.set("client_id", process.env.MONZO_CLIENT_ID);
+		formData.set("client_secret", process.env.MONZO_CLIENT_SECRET);
+		formData.set("redirect_uri", redirect_uri);
+		formData.set("code", authCode as string);
 
-	axios
-		.post(`${monzoApiUrl}/oauth2/token`, formData.toString())
-		.then((result) => res.json(result.data))
-		.catch(printError);
+		axios
+			.post(`${process.env.MONZO_API_URL}/oauth2/token`, formData.toString())
+			.then((result) => res.json(result.data))
+			.catch(printError);
+	}
 });
 
-app.get("/api/ping_monzo", (req, res) => {
+app.get("/api/monzo/ping_monzo", (req, res) => {
 	const { accessToken } = req.query;
 
 	axios
-		.get(`${monzoApiUrl}/ping/whoami`, {
+		.get(`${process.env.MONZO_API_URL}/ping/whoami`, {
 			headers: { Authorization: `Bearer ${accessToken}` },
 		})
 		.then((result) => res.json(result.data))
 		.catch(printError);
 });
 
-app.get("/api/get_accounts", (req, res) => {
+app.get("/api/monzo/get_accounts", (req, res) => {
 	const { accessToken } = req.query;
 
 	axios
-		.get(`${monzoApiUrl}/accounts`, {
+		.get(`${process.env.MONZO_API_URL}/accounts`, {
 			headers: { Authorization: `Bearer ${accessToken}` },
 		})
 		.then((result) => res.json(result.data))
 		.catch(printError);
 });
 
-app.get("/api/get_transactions", (req, res) => {
+app.get("/api/monzo/get_transactions", (req, res) => {
 	const { accessToken, accountID } = req.query;
 
 	const formData = new URLSearchParams();
 	formData.set("account_id", accountID as string);
 
 	axios
-		.get(`${monzoApiUrl}/transactions?account_id=${accountID}`, {
+		.get(`${process.env.MONZO_API_URL}/transactions?account_id=${accountID}`, {
 			headers: { Authorization: `Bearer ${accessToken}` },
 		})
 		.then((result) => res.json(result.data))

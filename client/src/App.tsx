@@ -89,7 +89,7 @@ function App() {
 	);
 
 	useEffect(() => {
-		fetch("/api/get_auth_url")
+		fetch("/api/monzo/get_auth_url")
 			.then((res) => res.json())
 			.then((val) => setMonzoAuthURL(val.authURL));
 	}, []);
@@ -102,7 +102,7 @@ function App() {
 
 	useEffect(() => {
 		if (monzoCode && !authorisationData.accessToken) {
-			fetch(`/api/exchange_auth_code?authCode=${monzoCode}`)
+			fetch(`/api/monzo/exchange_auth_code?authCode=${monzoCode}`)
 				.then((res) => res.json())
 				.then((val) =>
 					setAuthorisationData({
@@ -118,7 +118,7 @@ function App() {
 	}, [authorisationData.accessToken, monzoCode]);
 
 	const checkAuthorisationStatus = () => {
-		fetch(`/api/ping_monzo?accessToken=${authorisationData.accessToken}`)
+		fetch(`/api/monzo/ping_monzo?accessToken=${authorisationData.accessToken}`)
 			.then((res) => res.json())
 			.then((val) =>
 				setAuthenticationStatus({
@@ -131,7 +131,9 @@ function App() {
 	};
 
 	const getAccountList = () => {
-		fetch(`/api/get_accounts?accessToken=${authorisationData.accessToken}`)
+		fetch(
+			`/api/monzo/get_accounts?accessToken=${authorisationData.accessToken}`
+		)
 			.then((res) => res.json())
 			.then((val) =>
 				setAccounts(
@@ -155,7 +157,7 @@ function App() {
 
 	const getTransactionsList = () => {
 		fetch(
-			`/api/get_transactions?accessToken=${authorisationData.accessToken}&accountID=${accounts[0].ID}`
+			`/api/monzo/get_transactions?accessToken=${authorisationData.accessToken}&accountID=${accounts[0].ID}`
 		)
 			.then((res) => res.json())
 			.then((val) => {
