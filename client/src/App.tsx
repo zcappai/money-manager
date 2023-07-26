@@ -55,10 +55,20 @@ type Transaction = {
 
 function App() {
 	const [monzoAuthURL, setMonzoAuthURL] = useState<string | null>(null);
+	const [trueLayerAuthURL, setTrueLayerAuthURL] = useState<string | null>(null);
 	const [monzoCode, setMonzoCode] = useState<string | null>(null);
-	const [accounts, setAccounts] = useState<Array<Account>>([]);
-	const [transactions, setTransactions] = useState<Array<Transaction>>([]);
-	const [authorisationData, setAuthorisationData] = useReducer(
+	const [trueLayerCode, setTrueLayerCode] = useState<string | null>(null);
+	const [monzoAccounts, setMonzoAccounts] = useState<Array<Account>>([]);
+	const [trueLayerAccounts, setTrueLayerAccounts] = useState<Array<Account>>(
+		[]
+	);
+	const [monzoTransactions, setMonzoTransactions] = useState<
+		Array<Transaction>
+	>([]);
+	const [trueLayerTransactions, setTrueLayerTransactions] = useState<
+		Array<Transaction>
+	>([]);
+	const [monzoAuthorisationData, setMonzoAuthorisationData] = useReducer(
 		(curData: AuthorisationType, newData: Partial<AuthorisationType>) => ({
 			...curData,
 			...newData,
@@ -72,7 +82,22 @@ function App() {
 			userID: null,
 		}
 	);
-	const [authenticationStatus, setAuthenticationStatus] = useReducer(
+	const [trueLayerAuthorisationData, setTrueLayerAuthorisationData] =
+		useReducer(
+			(curData: AuthorisationType, newData: Partial<AuthorisationType>) => ({
+				...curData,
+				...newData,
+			}),
+			{
+				accessToken: null,
+				clientID: null,
+				expiresIn: null,
+				scope: null,
+				tokenType: null,
+				userID: null,
+			}
+		);
+	const [monzoAuthenticationStatus, setMonzoAuthenticationStatus] = useReducer(
 		(
 			curData: AuthenticationStatusType,
 			newData: Partial<AuthenticationStatusType>
@@ -88,6 +113,23 @@ function App() {
 		}
 	);
 
+	const [trueLayerAuthenticationStatus, setTrueLayerAuthenticationStatus] =
+		useReducer(
+			(
+				curData: AuthenticationStatusType,
+				newData: Partial<AuthenticationStatusType>
+			) => ({
+				...curData,
+				...newData,
+			}),
+			{
+				authenticated: false,
+				clientID: null,
+				clientIP: null,
+				userID: null,
+			}
+		);
+
 	useEffect(() => {
 		fetch("/api/monzo/get_auth_url")
 			.then((res) => res.json())
@@ -95,17 +137,23 @@ function App() {
 	}, []);
 
 	useEffect(() => {
-		const params = new URLSearchParams(window.location.search);
-		const code = params.get("code");
-		setMonzoCode(code);
+		if (window.location.pathname.includes("monzo_callback")) {
+			const params = new URLSearchParams(window.location.search);
+			const code = params.get("code");
+			setMonzoCode(code);
+		} else if (window.location.pathname.includes("truelayer_callback")) {
+			const params = new URLSearchParams(window.location.search);
+			const code = params.get("code");
+			setTrueLayerCode(code);
+		}
 	}, []);
 
 	useEffect(() => {
-		if (monzoCode && !authorisationData.accessToken) {
+		if (monzoCode && !monzoAuthorisationData.accessToken) {
 			fetch(`/api/monzo/exchange_auth_code?authCode=${monzoCode}`)
 				.then((res) => res.json())
 				.then((val) =>
-					setAuthorisationData({
+					setMonzoAuthorisationData({
 						accessToken: val.access_token,
 						clientID: val.client_id,
 						expiresIn: val.expires_in,
@@ -115,13 +163,31 @@ function App() {
 					})
 				);
 		}
-	}, [authorisationData.accessToken, monzoCode]);
+	}, [monzoAuthorisationData.accessToken, monzoCode]);
 
-	const checkAuthorisationStatus = () => {
-		fetch(`/api/monzo/ping_monzo?accessToken=${authorisationData.accessToken}`)
+	useEffect(() => {
+		if (trueLayerCode && !monzoAuthorisationData.accessToken) {
+			fetch(`/api/truelayer/exchange_auth_code?authCode=${trueLayerCode}`)
+				.then((res) => res.json())
+				.then((val) =>
+					setTrueLayerAuthorisationData({
+						accessToken: val.access_token,
+						expiresIn: val.expires_in,
+						scope: val.scope,
+						tokenType: val.token_type,
+						userID: val.user_id,
+					})
+				);
+		}
+	}, [monzoAuthorisationData.accessToken, trueLayerCode]);
+
+	const checkMonzoAuthorisationStatus = () => {
+		fetch(
+			`/api/monzo/ping_monzo?accessToken=${monzoAuthorisationData.accessToken}`
+		)
 			.then((res) => res.json())
 			.then((val) =>
-				setAuthenticationStatus({
+				setMonzoAuthenticationStatus({
 					authenticated: val.authenticated,
 					clientID: val.client_id,
 					clientIP: val.client_ip,
@@ -130,13 +196,26 @@ function App() {
 			);
 	};
 
-	const getAccountList = () => {
+	const checkTrueLayerAuthorisationStatus = () => {
 		fetch(
-			`/api/monzo/get_accounts?accessToken=${authorisationData.accessToken}`
+			`/api/truelayer/connection_metadata?accessToken=${trueLayerAuthorisationData.accessToken}`
 		)
 			.then((res) => res.json())
 			.then((val) =>
-				setAccounts(
+				setTrueLayerAuthenticationStatus({
+					authenticated: val.results[0].consent_status === "AUTHORISED",
+					clientID: val.results[0].client_id,
+				})
+			);
+	};
+
+	const getMonzoAccountList = () => {
+		fetch(
+			`/api/monzo/get_accounts?accessToken=${monzoAuthorisationData.accessToken}`
+		)
+			.then((res) => res.json())
+			.then((val) =>
+				setMonzoAccounts(
 					val.accounts.map((x: any) => {
 						const account: Account = {
 							ID: x.id,
@@ -155,9 +234,34 @@ function App() {
 			);
 	};
 
-	const getTransactionsList = () => {
+	const getTrueLayerAccountList = () => {
 		fetch(
-			`/api/monzo/get_transactions?accessToken=${authorisationData.accessToken}&accountID=${accounts[0].ID}`
+			`/api/truelayer/get_cards?accessToken=${trueLayerAuthorisationData.accessToken}`
+		)
+			.then((res) => res.json())
+			.then((val) =>
+				setTrueLayerAccounts(
+					val.results.map((x: any) => {
+						const account: Account = {
+							ID: x.account_id,
+							accountNumber: "",
+							closed: false,
+							countryCode: "",
+							created: "",
+							currency: x.currency,
+							description: x.display_name,
+							sortCode: "",
+							type: "",
+						};
+						return account;
+					})
+				)
+			);
+	};
+
+	const getMonzoTransactionsList = () => {
+		fetch(
+			`/api/monzo/get_transactions?accessToken=${monzoAuthorisationData.accessToken}&accountID=${monzoAccounts[0].ID}`
 		)
 			.then((res) => res.json())
 			.then((val) => {
@@ -181,9 +285,45 @@ function App() {
 						};
 						return transaction;
 					});
-				setTransactions(monzoTransactions.reverse());
+				setMonzoTransactions(monzoTransactions.reverse());
 			});
 	};
+
+	const getTrueLayerTransactionsList = () => {
+		fetch(
+			`/api/truelayer/get_transactions?accessToken=${trueLayerAuthorisationData.accessToken}&accountID=${trueLayerAccounts[0].ID}`
+		)
+			.then((res) => res.json())
+			.then((val) => {
+				const transactions: Array<Transaction> = val.results.map(
+					(x: any, index: number) => {
+						const transaction: Transaction = {
+							ID: index + 1,
+							accountID: "",
+							amount: x.amount,
+							amountWithPrefix: `${x.amount < 0 ? "-" : ""}£${Math.abs(
+								x.amount.toFixed(2)
+							)}`,
+							amountIsPending: false,
+							category: x.transaction_category,
+							counterpartyName: "",
+							created: moment(x.timestamp).format("H:MMA DD/MM/YYYY"),
+							currency: x.currency,
+							description: x.description,
+							notes: "",
+						};
+						return transaction;
+					}
+				);
+				setTrueLayerTransactions(transactions);
+			});
+	};
+
+	useEffect(() => {
+		fetch("/api/truelayer/get_auth_url")
+			.then((res) => res.json())
+			.then((val) => setTrueLayerAuthURL(val.authURL));
+	}, []);
 
 	const columns = [
 		<DataTableColumn
@@ -210,52 +350,150 @@ function App() {
 			<div className="App">
 				<header className="App-header">
 					<img src={logo} className="App-logo" alt="logo" />
-					<Badge
-						id={`badge-base-example-${
-							authenticationStatus.authenticated ? "success" : "error"
-						}`}
-						color={authenticationStatus.authenticated ? "success" : "error"}
-						content={`Monzo authentication status: ${
-							authenticationStatus.authenticated
-								? "Authenticated"
-								: "Not Authenticated"
-						}`}
-					/>
-					<Button
-						label="Authorise Monzo"
-						onClick={() =>
-							window.open(monzoAuthURL ? monzoAuthURL : "", "_blank")
-						}
-						className="slds-text-body_regular"
-					/>
-					<Button
-						label="Check Monzo authorisation status"
-						onClick={checkAuthorisationStatus}
-						className="slds-text-body_regular"
-					/>
-					<Button
-						label="Get list of accounts"
-						onClick={getAccountList}
-						className="slds-text-body_regular"
-						disabled={!authenticationStatus.authenticated}
-					/>
-					<Button
-						label="Get list of transactions"
-						onClick={getTransactionsList}
-						className="slds-text-body_regular"
-						disabled={!authenticationStatus.authenticated}
-					/>
-					{`Monzo account balance: £${transactions
-						.map((x) => x.amount)
-						.reduce((a, b) => a + b, 0)
-						.toFixed(2)}`}
-					<div style={{ height: "500px", overflow: "scroll" }}>
-						<DataTable
-							items={transactions}
-							className="slds-text-body_regular slds-text-color_default"
-						>
-							{columns}
-						</DataTable>
+					<div className="slds-grid slds-gutters">
+						<div className="slds-col slds-size_1-of-2">
+							<div className="slds-col">
+								<Badge
+									id={`badge-base-example-${
+										monzoAuthenticationStatus.authenticated
+											? "success"
+											: "error"
+									}`}
+									color={
+										monzoAuthenticationStatus.authenticated
+											? "success"
+											: "error"
+									}
+									content={`Monzo authentication status: ${
+										monzoAuthenticationStatus.authenticated
+											? "Authenticated"
+											: "Not Authenticated"
+									}`}
+								/>
+							</div>
+							<div className="slds-col">
+								<Button
+									label="Authorise Monzo"
+									onClick={() =>
+										window.open(monzoAuthURL ? monzoAuthURL : "", "_blank")
+									}
+									className="slds-text-body_regular"
+								/>
+							</div>
+							<div className="slds-col">
+								<Button
+									label="Check Monzo authorisation status"
+									onClick={checkMonzoAuthorisationStatus}
+									className="slds-text-body_regular"
+								/>
+							</div>
+							<div className="slds-col">
+								<Button
+									label="Get list of accounts"
+									onClick={getMonzoAccountList}
+									className="slds-text-body_regular"
+									disabled={!monzoAuthenticationStatus.authenticated}
+								/>
+							</div>
+							<div className="slds-col">
+								<Button
+									label="Get list of transactions"
+									onClick={getMonzoTransactionsList}
+									className="slds-text-body_regular"
+									disabled={!monzoAuthenticationStatus.authenticated}
+								/>
+							</div>
+							<div className="slds-col">
+								{`Monzo account balance: £${monzoTransactions
+									.map((x) => x.amount)
+									.reduce((a, b) => a + b, 0)
+									.toFixed(2)}`}
+							</div>
+							<div
+								className="slds-col"
+								style={{ height: "500px", overflow: "scroll" }}
+							>
+								<DataTable
+									items={monzoTransactions}
+									className="slds-text-body_regular slds-text-color_default"
+								>
+									{columns}
+								</DataTable>
+							</div>
+						</div>
+						<div className="slds-col slds-size_1-of-2">
+							<div className="slds-col">
+								<Badge
+									id={`badge-base-example-${
+										trueLayerAuthenticationStatus.authenticated
+											? "success"
+											: "error"
+									}`}
+									color={
+										trueLayerAuthenticationStatus.authenticated
+											? "success"
+											: "error"
+									}
+									content={`TrueLayer authentication status: ${
+										trueLayerAuthenticationStatus.authenticated
+											? "Authenticated"
+											: "Not Authenticated"
+									}`}
+								/>
+							</div>
+							<div className="slds-col">
+								<Button
+									label="Authorise TrueLayer"
+									onClick={() =>
+										window.open(
+											trueLayerAuthURL ? trueLayerAuthURL : "",
+											"_blank"
+										)
+									}
+									className="slds-text-body_regular"
+								/>
+							</div>
+							<div className="slds-col">
+								<Button
+									label="Check TrueLayer authorisation status"
+									onClick={checkTrueLayerAuthorisationStatus}
+									className="slds-text-body_regular"
+								/>
+							</div>
+							<div className="slds-col">
+								<Button
+									label="Get list of accounts"
+									onClick={getTrueLayerAccountList}
+									className="slds-text-body_regular"
+									disabled={!trueLayerAuthenticationStatus.authenticated}
+								/>
+							</div>
+							<div className="slds-col">
+								<Button
+									label="Get list of transactions"
+									onClick={getTrueLayerTransactionsList}
+									className="slds-text-body_regular"
+									disabled={!trueLayerAuthenticationStatus.authenticated}
+								/>
+							</div>
+							<div className="slds-col">
+								{`American Express account balance: £${trueLayerTransactions
+									.map((x) => x.amount)
+									.reduce((a, b) => a + b, 0)
+									.toFixed(2)}`}
+							</div>
+							<div
+								className="slds-col"
+								style={{ height: "500px", overflow: "scroll" }}
+							>
+								<DataTable
+									items={trueLayerTransactions}
+									className="slds-text-body_regular slds-text-color_default"
+								>
+									{columns}
+								</DataTable>
+							</div>
+						</div>
 					</div>
 				</header>
 			</div>
