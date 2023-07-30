@@ -53,7 +53,15 @@ type Transaction = {
 	notes: string;
 };
 
-function App() {
+enum BankAccount {
+	AmericanExpress = "uk-ob-amex",
+	HSBC = "uk-ob-hsbc",
+	Monzo = "uk-ob-monzo",
+	Revolut = "uk-ob-revolut",
+	Starling = "uk-ob-starling",
+}
+
+const App = () => {
 	const [monzoAuthURL, setMonzoAuthURL] = useState<string | null>(null);
 	const [trueLayerAuthURL, setTrueLayerAuthURL] = useState<string | null>(null);
 	const [monzoCode, setMonzoCode] = useState<string | null>(null);
@@ -404,7 +412,7 @@ function App() {
 								/>
 							</div>
 							<div className="slds-col">
-								{`Monzo account balance: £${monzoTransactions
+								{`Monzo Account Balance: £${monzoTransactions
 									.map((x) => x.amount)
 									.reduce((a, b) => a + b, 0)
 									.toFixed(2)}`}
@@ -477,7 +485,7 @@ function App() {
 								/>
 							</div>
 							<div className="slds-col">
-								{`American Express account balance: £${trueLayerTransactions
+								{`AMEX Account Balance: £${trueLayerTransactions
 									.map((x) => x.amount)
 									.reduce((a, b) => a + b, 0)
 									.toFixed(2)}`}
@@ -499,6 +507,6 @@ function App() {
 			</div>
 		</IconSettings>
 	);
-}
+};
 
 export default App;
