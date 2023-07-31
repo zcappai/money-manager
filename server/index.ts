@@ -1,5 +1,7 @@
 import express from "express";
 import axios, { AxiosError } from "axios";
+import fs from "fs";
+import os from "os";
 
 require("dotenv").config();
 
@@ -15,7 +17,7 @@ const truelayerScopes = [
 	"transactions",
 	"direct_debits",
 	"standing_orders",
-	// "offline_access",
+	"offline_access",
 ];
 
 const truelayerProviders = [
@@ -187,4 +189,22 @@ const printError = (error: AxiosError) => {
 		console.log("Error", error.message);
 	}
 	console.log(error.config);
+};
+
+const setEnvValue = (key: string, value: string) => {
+	// read file from hdd & split if from a linebreak to a array
+	const ENV_VARS = fs.readFileSync("./.env", "utf8").split(os.EOL);
+
+	const ENV = ENV_VARS.find((line) => line.match(new RegExp(key)));
+
+	if (ENV) {
+		// find the env we want based on the key
+		const target = ENV_VARS.indexOf(ENV);
+
+		// replace the key/value with the new value
+		ENV_VARS.splice(target, 1, `${key}=${value}`);
+
+		// write everything back to the file system
+		fs.writeFileSync("./.env", ENV_VARS.join(os.EOL));
+	}
 };
