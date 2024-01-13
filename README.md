@@ -1,11 +1,11 @@
 # Money Manager
 Money Manager is a website that uses the TrueLayer API to connect to various banks to fetch and display all transactions.
 
-Bank supported:
+Banks supported:
 * Monzo
 * American Express
 * HSBC
-* Revolu
+* Revolut
 * Starling
 
 Instructions:
