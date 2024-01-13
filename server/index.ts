@@ -1,5 +1,5 @@
-import express from "express";
 import axios, { AxiosError } from "axios";
+import express from "express";
 import fs from "fs";
 import os from "os";
 
@@ -30,9 +30,10 @@ const truelayerProviders = [
 
 // Truelayer endpoints
 app.get("/api/truelayer/get_auth_url", (req, res) => {
+	const { provider } = req.query;
 	const scopes = truelayerScopes.join("%20");
-	const providers = truelayerProviders.join("%20").concat("%20uk-oauth-all");
-	let authURL = `${process.env.TRUELAYER_AUTH_URL}/?response_type=code&client_id=${process.env.TRUELAYER_CLIENT_ID}&scope=${scopes}&redirect_uri=${process.env.TRUELAYER_REDIRECT_URL}&providers=${providers}`;
+	const providerURL = (provider as string).concat("%20uk-oauth-all");
+	let authURL = `${process.env.TRUELAYER_AUTH_URL}/?response_type=code&client_id=${process.env.TRUELAYER_CLIENT_ID}&scope=${scopes}&redirect_uri=${process.env.TRUELAYER_REDIRECT_URL}&providers=${providerURL}`;
 	res.json({ authURL: authURL });
 });
 
