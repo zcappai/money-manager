@@ -8,7 +8,7 @@ Instructions:
 1. Clone the repository.
 2. Modify the .env_template file in the root of the repository by renaming it to .env and populating the variables.
 3. Open PowerShell in the client folder and run "npm start".
-4. Open PowerShell in the server folder and run "node index.ts".
+4. Open PowerShell in the root folder and run "npm start".
 
 ### Languages:
 <a href="#"><img align="left" alt="TypeScript" height="25px" src="https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white" /></a>
