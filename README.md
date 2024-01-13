@@ -3,6 +3,10 @@ Money Manager is a website that uses the TrueLayer API to connect to various ban
 
 Bank supported:
 * Monzo
+* American Express
+* HSBC
+* Revolu
+* Starling
 
 Instructions:
 1. Clone the repository.
