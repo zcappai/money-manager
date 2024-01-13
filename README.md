@@ -4,6 +4,12 @@ Money Manager is a website that uses the TrueLayer API to connect to various ban
 Bank supported:
 * Monzo
 
+Instructions:
+1. Clone the repository.
+2. Modify the .env_template file in the root of the repository by renaming it to .env and populating the variables.
+3. Open PowerShell in the client folder and run "npm start".
+4. Open PowerShell in the server folder and run "node index.ts".
+
 ### Languages:
 <a href="#"><img align="left" alt="TypeScript" height="25px" src="https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white" /></a>
 <a href="#"><img align="left" alt="React" height="25px" src="https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB" /></a>
