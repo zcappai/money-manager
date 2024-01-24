@@ -1,7 +1,10 @@
 import moment from "moment";
 import { Dispatch, SetStateAction } from "react";
 import { Provider } from "../Enums/BankAccountEnums";
-import { enumToProviderID } from "../Helpers/BankAccountHelper";
+import {
+	enumToProviderID,
+	enumToProviderKeyPrefix,
+} from "../Helpers/BankAccountHelper";
 import {
 	Account,
 	AuthenticationStatusType,
@@ -13,14 +16,32 @@ class BankAccountStore {
 		let providerID = enumToProviderID(provider);
 		fetch(`/api/truelayer/get_auth_url?provider=${providerID}`)
 			.then((res) => res.json())
-			.then((val) => window.open(val.authURL ? val.authURL : "", "_blank"));
+			.then((val) => window.open(val.authURL ? val.authURL : "", "_self"));
 	};
 
-	static checkAuthorisationStatus = (
+	static exchangeAuthCode = (authCode: string, successFn: () => void) => {
+		fetch(`/api/truelayer/exchange_auth_code?authCode=${authCode}`)
+			.then((res) => res.json())
+			.then((val) =>
+				this.setTokens(val.access_token, val.refresh_token, successFn)
+			);
+	};
+
+	static setTokens = (
 		accessToken: string,
+		refreshToken: string,
+		successFn: () => void
+	) =>
+		fetch(
+			`/api/truelayer/set_tokens?accessToken=${accessToken}&refreshToken=${refreshToken}`
+		).then(successFn);
+
+	static checkAuthorisationStatus = (
+		provider: Provider,
 		setData: Dispatch<Partial<AuthenticationStatusType>>
 	) => {
-		fetch(`/api/truelayer/connection_metadata?accessToken=${accessToken}`)
+		const providerKey = enumToProviderKeyPrefix(provider);
+		fetch(`/api/truelayer/connection_metadata?providerKey=${providerKey}`)
 			.then((res) => res.json())
 			.then((val) =>
 				setData({
@@ -31,10 +52,11 @@ class BankAccountStore {
 	};
 
 	static getAccountList = (
-		accessToken: string,
+		provider: Provider,
 		setData: Dispatch<SetStateAction<Array<Account>>>
 	) => {
-		fetch(`/api/truelayer/get_cards?accessToken=${accessToken}`)
+		const providerKey = enumToProviderKeyPrefix(provider);
+		fetch(`/api/truelayer/get_cards?providerKey=${providerKey}`)
 			.then((res) => res.json())
 			.then((val) =>
 				setData(
@@ -57,12 +79,13 @@ class BankAccountStore {
 	};
 
 	static getTrueLayerTransactionsList = (
-		accessToken: string,
+		provider: Provider,
 		accountID: string,
 		setData: Dispatch<SetStateAction<Array<Transaction>>>
 	) => {
+		const providerKey = enumToProviderKeyPrefix(provider);
 		fetch(
-			`/api/truelayer/get_transactions?accessToken=${accessToken}&accountID=${accountID}`
+			`/api/truelayer/get_transactions?providerKey=${providerKey}&accountID=${accountID}`
 		)
 			.then((res) => res.json())
 			.then((val) => {

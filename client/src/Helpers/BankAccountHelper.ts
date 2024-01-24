@@ -50,3 +50,20 @@ export const enumToAuthStatus = (provider: Provider) => {
 			throw new Error(`Unknown provider: ${provider}`);
 	}
 };
+
+export const enumToProviderKeyPrefix = (provider: Provider) => {
+	switch (provider) {
+		case Provider.AmericanExpress:
+			return "AMEX";
+		case Provider.HSBC:
+			return "HSBC";
+		case Provider.Monzo:
+			return "MONZO";
+		case Provider.Revolut:
+			return "REVOLUT";
+		case Provider.Starling:
+			return "STARLING";
+		default:
+			throw new Error(`Unknown provider: ${provider}`);
+	}
+};

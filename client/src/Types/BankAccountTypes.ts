@@ -32,11 +32,11 @@ export type Transaction = {
 	notes: string;
 };
 
-export type AuthorisationType = {
-	accessToken: string | null | null;
-	clientID: string | null;
-	expiresIn: number | null;
-	scope: string | null;
-	tokenType: string | null;
-	userID: string | null;
-};
+// export type AuthorisationType = {
+// 	accessToken: string | null | null;
+// 	clientID: string | null;
+// 	expiresIn: number | null;
+// 	refreshToken: string | null;
+// 	scope: string | null;
+// 	tokenType: string | null;
+// };

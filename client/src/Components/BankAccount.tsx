@@ -4,14 +4,13 @@ import {
 	DataTable,
 	DataTableColumn,
 } from "@salesforce/design-system-react";
-import React, { useEffect, useReducer, useState } from "react";
+import React, { useReducer, useState } from "react";
 import { Provider } from "../Enums/BankAccountEnums";
 import { enumToProviderName } from "../Helpers/BankAccountHelper";
 import BankAccountStore from "../Stores/BankAccountStore";
 import {
 	Account,
 	AuthenticationStatusType,
-	AuthorisationType,
 	Transaction,
 } from "../Types/BankAccountTypes";
 
@@ -40,25 +39,23 @@ type Props = {
 };
 
 const BankAccount = (props: Props) => {
-	const [authCode, setAuthCode] = useState<string | null>(null);
-	const [accessToken, setAccessToken] = useState<string | null>(null);
 	const [accountsList, setAccountsList] = useState<Array<Account>>([]);
 	const [transactions, setTransactions] = useState<Array<Transaction>>([]);
 
-	const [authorisationData, setAuthorisationData] = useReducer(
-		(curData: AuthorisationType, newData: Partial<AuthorisationType>) => ({
-			...curData,
-			...newData,
-		}),
-		{
-			accessToken: null,
-			clientID: null,
-			expiresIn: null,
-			scope: null,
-			tokenType: null,
-			userID: null,
-		}
-	);
+	// const [authorisationData, setAuthorisationData] = useReducer(
+	// 	(curData: AuthorisationType, newData: Partial<AuthorisationType>) => ({
+	// 		...curData,
+	// 		...newData,
+	// 	}),
+	// 	{
+	// 		accessToken: null,
+	// 		clientID: null,
+	// 		expiresIn: null,
+	// 		refreshToken: null,
+	// 		scope: null,
+	// 		tokenType: null,
+	// 	}
+	// );
 
 	const [authenticationStatus, setAuthenticationStatus] = useReducer(
 		(
@@ -76,54 +73,23 @@ const BankAccount = (props: Props) => {
 		}
 	);
 
-	useEffect(() => {
-		if (window.location.pathname.includes("truelayer_callback")) {
-			const params = new URLSearchParams(window.location.search);
-			const code = params.get("code");
-			setAuthCode(code);
-		}
-	}, []);
-
-	useEffect(() => {
-		if (authCode && !authorisationData.accessToken) {
-			fetch(`/api/truelayer/exchange_auth_code?authCode=${authCode}`)
-				.then((res) => res.json())
-				.then((val) => {
-					setAuthorisationData({
-						accessToken: val.access_token,
-						expiresIn: val.expires_in,
-						scope: val.scope,
-						tokenType: val.token_type,
-						userID: val.user_id,
-					});
-					setAccessToken(val.access_token);
-				});
-		}
-	}, [authorisationData.accessToken, authCode]);
-
 	const getAndOpenAuthURL = () =>
 		BankAccountStore.getAndOpenAuthURL(props.provider);
 
-	const checkAuthStatus = () => {
-		if (accessToken) {
-			BankAccountStore.checkAuthorisationStatus(
-				accessToken,
-				setAuthenticationStatus
-			);
-		}
-	};
+	const checkAuthStatus = () =>
+		BankAccountStore.checkAuthorisationStatus(
+			props.provider,
+			setAuthenticationStatus
+		);
 
-	const getAccountsList = () => {
-		if (accessToken) {
-			BankAccountStore.getAccountList(accessToken, setAccountsList);
-		}
-	};
+	const getAccountsList = () =>
+		BankAccountStore.getAccountList(props.provider, setAccountsList);
 
 	const getTransactionsList = () => {
 		let accountID: string = accountsList[0].ID;
-		if (accessToken && accountsList[0].ID) {
+		if (accountsList[0].ID) {
 			BankAccountStore.getTrueLayerTransactionsList(
-				accessToken,
+				props.provider,
 				accountID,
 				setTransactions
 			);
@@ -167,7 +133,7 @@ const BankAccount = (props: Props) => {
 				className="slds-text-body_regular"
 				disabled={!authenticationStatus.authenticated}
 			/>
-			{`AMEX Account Balance: £${transactions
+			{`${enumToProviderName(props.provider)} Account Balance: £${transactions
 				.map((x) => x.amount)
 				.reduce((a, b) => a + b, 0)
 				.toFixed(2)}`}

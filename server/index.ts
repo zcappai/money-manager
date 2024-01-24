@@ -63,8 +63,9 @@ app.get("/api/truelayer/exchange_auth_code", (req, res) => {
 });
 
 app.get("/api/truelayer/connection_metadata", (req, res) => {
-	const { accessToken } = req.query;
+	const { providerKey } = req.query;
 
+	const accessToken = process.env[`${providerKey}_ACCESS_TOKEN`];
 	axios
 		.get(`${process.env.TRUELAYER_API_URL}/data/v1/me`, {
 			headers: { Authorization: `Bearer ${accessToken}` },
@@ -74,8 +75,9 @@ app.get("/api/truelayer/connection_metadata", (req, res) => {
 });
 
 app.get("/api/truelayer/get_cards", (req, res) => {
-	const { accessToken } = req.query;
+	const { providerKey } = req.query;
 
+	const accessToken = process.env[`${providerKey}_ACCESS_TOKEN`];
 	axios
 		.get(`${process.env.TRUELAYER_API_URL}/data/v1/cards`, {
 			headers: { Authorization: `Bearer ${accessToken}` },
@@ -85,8 +87,9 @@ app.get("/api/truelayer/get_cards", (req, res) => {
 });
 
 app.get("/api/truelayer/get_transactions", (req, res) => {
-	const { accessToken, accountID } = req.query;
+	const { providerKey, accountID } = req.query;
 
+	const accessToken = process.env[`${providerKey}_ACCESS_TOKEN`];
 	const formData = new URLSearchParams();
 	formData.set("account_id", accountID as string);
 
@@ -105,6 +108,13 @@ app.get("/api/truelayer/get_transactions", (req, res) => {
 		)
 		.then((result) => res.json(result.data))
 		.catch(printError);
+});
+
+app.get("/api/truelayer/set_tokens", (req, res) => {
+	const { accessToken, refreshToken } = req.query;
+	setEnvValue("AMEX_ACCESS_TOKEN", accessToken as string);
+	setEnvValue("AMEX_REFRESH_TOKEN", refreshToken as string);
+	res.send();
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
