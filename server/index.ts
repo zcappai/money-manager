@@ -20,13 +20,10 @@ const truelayerScopes = [
 	"offline_access",
 ];
 
-const truelayerProviders = [
-	"uk-ob-amex",
-	"uk-ob-hsbc",
-	"uk-ob-monzo",
-	"uk-ob-revolut",
-	"uk-ob-starling",
-];
+enum GrantType {
+	AuthorizationCode = "authorization_code",
+	RefreshToken = "refresh_token",
+}
 
 // Truelayer endpoints
 app.get("/api/truelayer/get_auth_url", (req, res) => {
@@ -46,11 +43,36 @@ app.get("/api/truelayer/exchange_auth_code", (req, res) => {
 		process.env.TRUELAYER_REDIRECT_URL
 	) {
 		const formData = new URLSearchParams();
-		formData.set("grant_type", "authorization_code");
+		formData.set("grant_type", GrantType.AuthorizationCode);
 		formData.set("client_id", process.env.TRUELAYER_CLIENT_ID);
 		formData.set("client_secret", process.env.TRUELAYER_CLIENT_SECRET);
 		formData.set("redirect_uri", process.env.TRUELAYER_REDIRECT_URL);
 		formData.set("code", authCode as string);
+
+		axios
+			.post(
+				`${process.env.TRUELAYER_AUTH_URL}/connect/token`,
+				formData.toString()
+			)
+			.then((result) => res.json(result.data))
+			.catch(printError);
+	}
+});
+
+app.get("/api/truelayer/refresh_access_token", (req, res) => {
+	const { providerKey } = req.query;
+
+	const refreshToken = process.env[`${providerKey}_REFRESH_TOKEN`];
+	if (
+		process.env.TRUELAYER_CLIENT_ID &&
+		process.env.TRUELAYER_CLIENT_SECRET &&
+		refreshToken
+	) {
+		const formData = new URLSearchParams();
+		formData.set("grant_type", GrantType.RefreshToken);
+		formData.set("client_id", process.env.TRUELAYER_CLIENT_ID);
+		formData.set("client_secret", process.env.TRUELAYER_CLIENT_SECRET);
+		formData.set("refresh_token", refreshToken);
 
 		axios
 			.post(
